@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasly Applicant Information</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #eef2fa; --surface: #fff; --ink: #14213d; --muted: #55617a;
+    --line: #c5cde0; --navy: #153a8c; --red: #d7262d; --tint: #f1f5fd;
+    --on-navy: #fff; --err: #b3141b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1424; --surface: #172038; --ink: #e8ecf7; --muted: #a2adc7;
+      --line: #35415f; --navy: #4a74d9; --red: #ff5a60; --tint: #1c2644; --err: #ff8a8f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  .sheet { max-width: 760px; margin: 0 auto; background: var(--surface); min-height: 100vh; }
+  @media (min-width: 800px) {
+    body { padding: 32px 16px; }
+    .sheet { min-height: 0; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 24px rgba(20,33,61,.12); }
+  }
+  .band { height: 14px; background: linear-gradient(100deg, var(--red) 0 22%, var(--navy) 22% 100%); }
+  header { padding: 24px 24px 8px; text-align: center; }
+  .brand { font-size: 1.75rem; font-weight: 800; color: var(--navy); margin: 0; letter-spacing: -.01em; }
+  .brand b { color: var(--red); }
+  .addr { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+  h1 { margin: 20px auto 0; display: inline-block; background: var(--navy); color: var(--on-navy);
+    font-size: 1.25rem; padding: 8px 32px; border-radius: 999px; }
+  form { padding: 8px 24px 32px; }
+  fieldset { border: 0; margin: 24px 0 0; padding: 0; min-width: 0; }
+  legend { width: 100%; padding: 0 0 8px; margin-bottom: 14px; border-bottom: 2px solid var(--navy);
+    color: var(--navy); font-weight: 700; font-size: 1.1rem; }
+  .grid { display: grid; gap: 14px 16px; grid-template-columns: repeat(2, 1fr); }
+  .grid .full { grid-column: 1 / -1; }
+  @media (min-width: 640px) {
+    .grid { grid-template-columns: repeat(6, 1fr); }
+    .grid > * { grid-column: span 3; }
+    .grid .full { grid-column: 1 / -1; }
+    .grid .third { grid-column: span 2; }
+  }
+  label.field { display: block; font-weight: 600; font-size: .92rem; margin-bottom: 4px; }
+  .req::after { content: " *"; color: var(--red); }
+  input[type=text], input[type=tel], input[type=date] {
+    width: 100%; font: inherit; color: var(--ink); background: var(--surface);
+    border: 1.5px solid var(--line); border-radius: 6px; padding: 10px 12px; min-height: 44px; }
+  input:focus-visible, .choice:focus-within { outline: 3px solid var(--navy); outline-offset: 1px; }
+  .group { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .group > legend { all: unset; display: block; font-weight: 600; font-size: .92rem; margin-bottom: 6px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choice { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--line); border-radius: 6px;
+    padding: 10px 14px; min-height: 44px; cursor: pointer; background: var(--surface); }
+  .choice:has(input:checked) { border-color: var(--navy); background: var(--tint); }
+  .choice input { accent-color: var(--navy); width: 18px; height: 18px; margin: 0; }
+  .choice small { color: var(--muted); }
+  .terms { background: var(--tint); border: 1px dashed var(--navy); border-radius: 6px;
+    padding: 14px 18px 14px 36px; margin: 0 0 14px; }
+  .terms li { margin: 6px 0; }
+  .agree { margin-bottom: 14px; }
+  .hint { color: var(--muted); font-size: .82rem; margin: 4px 0 0; }
+  .sigin { font-family: "Brush Script MT", "Segoe Script", cursive; font-size: 1.3rem; }
+  .certify { font-style: italic; color: var(--muted); margin: 16px 0 14px; }
+  .error { color: var(--err); font-size: .85rem; margin: 4px 0 0; display: none; }
+  [aria-invalid=true] { border-color: var(--err) !important; }
+  [aria-invalid=true] ~ .error, .group.invalid .error { display: block; }
+  .actions { margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap; }
+  button { font: inherit; font-weight: 700; cursor: pointer; min-height: 48px; padding: 0 28px; border-radius: 6px; }
+  .primary { background: var(--navy); color: var(--on-navy); border: 0; }
+  .primary:hover { filter: brightness(1.1); }
+  .secondary { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+  button:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+
+  /* ---------- Filled-in paper form ---------- */
+  #resultView { display: none; padding: 16px 8px 40px; }
+  .toolbar { max-width: 760px; margin: 0 auto 16px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .stage { display: flex; justify-content: center; }
+  #paper {
+    width: 700px; background: #fff; color: #153a8c; padding: 0; position: relative;
+    font: 11px/1.3 "Times New Roman", Georgia, serif; box-shadow: 0 2px 24px rgba(0,0,0,.2);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  #paper * { color: #153a8c; }
+  .p-top { height: 12px; background: linear-gradient(100deg, #d7262d 0 20%, #153a8c 20% 100%); }
+  .p-head { text-align: center; padding: 10px 20px 0; }
+  .p-logo { display: flex; justify-content: center; align-items: center; gap: 12px; }
+  .p-logo .t { font: 900 28px/1 Arial, sans-serif; color: #d7262d !important; letter-spacing: -1px; }
+  .p-logo .c { font: 800 18px/1.1 Arial, sans-serif; text-align: left; }
+  .p-logo .c small { display: block; font: 400 10px Arial, sans-serif; }
+  .p-pill { display: block; width: max-content; margin: 12px auto 8px; background: #153a8c; border-radius: 10px;
+    font: 800 18px Arial, sans-serif; padding: 4px 40px; }
+  #paper .p-pill, #paper .p-pill * { color: #fff !important; }
+  .p-body { padding: 0 20px 14px; }
+  .row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0; }
+  .l { font-weight: 700; font-size: 10.5px; white-space: nowrap; }
+  .unit { display: flex; flex-direction: column; }
+  .unit .cap { font-weight: 700; font-size: 10px; margin-top: 1px; }
+  .boxes { display: inline-flex; padding-left: 1px; }
+  .c1 { width: 15px; height: 18px; border: 1px solid #153a8c; margin-left: -1px;
+    text-align: center; font: 700 12px/16px Arial, sans-serif; color: #111 !important; }
+  .slash { width: 10px; text-align: center; font: 700 12px/18px Arial, sans-serif; }
+  .ck { display: inline-flex; align-items: center; gap: 5px; }
+  .cb { width: 16px; height: 16px; border: 1px solid #153a8c; display: inline-block; text-align: center;
+    font: 700 13px/14px Arial, sans-serif; color: #111 !important; }
+  .p-terms { border: 1px dotted #153a8c; background: #f1f5fd; margin: 14px 0 8px; padding: 8px 10px 8px 6px; position: relative; }
+  .p-terms h3 { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); margin: 0; background: #153a8c;
+    border-radius: 8px; padding: 3px 24px; font: 700 14px "Times New Roman", serif; white-space: nowrap; }
+  #paper .p-terms h3 { color: #fff !important; }
+  .p-terms ol { margin: 8px 0 0; padding-left: 24px; }
+  .p-terms li { margin: 2px 0; font-size: 11px; }
+  .line { display: inline-block; min-width: 180px; border-bottom: 1px solid #153a8c; height: 20px;
+    font: 18px/18px "Brush Script MT", "Segoe Script", cursive; color: #111 !important; padding: 0 4px; vertical-align: bottom; white-space: nowrap; }
+  .line.dt { min-width: 120px; font: 700 12px/18px Arial, sans-serif; }
+  .p-sec { display: flex; align-items: center; gap: 10px; margin: 14px 0 8px; }
+  .p-sec::before, .p-sec::after { content: ""; flex: 1; height: 1px; background: #153a8c; }
+  .p-sec span { background: #153a8c; border-radius: 8px; font: 700 14px "Times New Roman", serif; padding: 3px 28px; }
+  #paper .p-sec span { color: #fff !important; }
+  .p-cert { font-style: italic; font-size: 10.5px; margin: 6px 0 8px; }
+  .p-foot { display: flex; justify-content: space-between; gap: 8px; padding: 10px 20px; font: 700 10px Arial, sans-serif;
+    background: linear-gradient(100deg, #d7262d 0 12%, #153a8c 12% 100%); }
+  #paper .p-foot, #paper .p-foot * { color: #fff !important; }
+
+  @media print {
+    @page { size: A4; margin: 10mm; }
+    body { background: #fff; padding: 0; }
+    #formView, .toolbar { display: none !important; }
+    #resultView { padding: 0; display: block; }
+    #paper { box-shadow: none; zoom: 1 !important; margin: 0 auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet" id="formView">
+  <div class="band" aria-hidden="true"></div>
+  <header>
+    <p class="brand"><b>TASLY</b> WORLD (NIGERIA) CO. LTD</p>
+    <p class="addr">No. 16, Water Works, Road Oniru Estate, V/I Lagos<br>Tel: +234 0806 0023377</p>
+    <h1>Applicant Information</h1>
+  </header>
+
+  <form id="form" novalidate>
+    <fieldset>
+      <legend>Applicant details</legend>
+      <div class="grid">
+        <div class="full">
+          <label class="field" for="distributorNo">Distributor No.</label>
+          <input type="text" id="distributorNo" name="distributorNo" maxlength="13" autocomplete="off">
+        </div>
+        <div class="third">
+          <label class="field req" for="firstName">First name</label>
+          <input type="text" id="firstName" name="firstName" maxlength="13" required autocomplete="given-name">
+          <p class="error">Enter your first name.</p>
+        </div>
+        <div class="third">
+          <label class="field" for="middleName">Middle name</label>
+          <input type="text" id="middleName" name="middleName" maxlength="13" autocomplete="additional-name">
+        </div>
+        <div class="third">
+          <label class="field req" for="lastName">Last name</label>
+          <input type="text" id="lastName" name="lastName" maxlength="13" required autocomplete="family-name">
+          <p class="error">Enter your last name.</p>
+        </div>
+
+        <fieldset class="group" data-required>
+          <legend class="req">Gender</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="gender" value="Male"> Male</label>
+            <label class="choice"><input type="radio" name="gender" value="Female"> Female</label>
+          </div>
+          <p class="error">Select your gender.</p>
+        </fieldset>
+        <fieldset class="group" data-required>
+          <legend class="req">Marital status</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="marital" value="Single"> Single</label>
+            <label class="choice"><input type="radio" name="marital" value="Married"> Married</label>
+          </div>
+          <p class="error">Select your marital status.</p>
+        </fieldset>
+
+        <div>
+          <label class="field" for="nationality">Nationality</label>
+          <input type="text" id="nationality" name="nationality" value="Nigerian" maxlength="12" autocomplete="off">
+        </div>
+        <div>
+          <label class="field" for="religion">Religion</label>
+          <input type="text" id="religion" name="religion" maxlength="14" autocomplete="off">
+        </div>
+
+        <fieldset class="group full" data-required>
+          <legend class="req">Educational qualification</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="education" value="SSCE/GCE"> SSCE/GCE</label>
+            <label class="choice"><input type="radio" name="education" value="OND/NCE"> OND/NCE</label>
+            <label class="choice"><input type="radio" name="education" value="HSC/BSC"> HSC/BSC</label>
+            <label class="choice"><input type="radio" name="education" value="Post-graduate"> Post-graduate</label>
+          </div>
+          <p class="error">Select your highest qualification.</p>
+        </fieldset>
+
+        <div class="full">
+          <label class="field" for="occupation">Occupation</label>
+          <input type="text" id="occupation" name="occupation" maxlength="14" autocomplete="off">
+        </div>
+
+        <fieldset class="group full" data-required>
+          <legend class="req">Monthly income range (₦)</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="income" value="lower"> Lower <small>0 – 40,000</small></label>
+            <label class="choice"><input type="radio" name="income" value="middle"> Middle <small>50,000 – 90,000</small></label>
+            <label class="choice"><input type="radio" name="income" value="upper"> Upper <small>100,000 and above</small></label>
+          </div>
+          <p class="error">Select an income range.</p>
+        </fieldset>
+
+        <div class="full">
+          <label class="field req" for="address1">Residential address</label>
+          <input type="text" id="address1" name="address1" maxlength="36" required autocomplete="address-line1">
+          <p class="error">Enter your residential address.</p>
+        </div>
+        <div class="full">
+          <label class="field" for="address2">Address line 2</label>
+          <input type="text" id="address2" name="address2" maxlength="43" autocomplete="address-line2">
+        </div>
+
+        <div>
+          <label class="field req" for="phone1">Phone number 1</label>
+          <input type="tel" id="phone1" name="phone1" required inputmode="numeric" maxlength="11" placeholder="07123456789" autocomplete="tel">
+          <p class="error">Enter 11 digits starting with 0, e.g. 07123456789.</p>
+        </div>
+        <div>
+          <label class="field" for="phone2">Phone number 2 (optional)</label>
+          <input type="tel" id="phone2" name="phone2" inputmode="numeric" maxlength="11" placeholder="08123456789" autocomplete="off">
+          <p class="error">Enter 11 digits starting with 0, or leave empty.</p>
+        </div>
+
+        <div class="full">
+          <label class="field req" for="dob">Date of birth (DD/MM/YYYY)</label>
+          <input type="date" id="dob" name="dob" required autocomplete="bday">
+          <p class="error">Enter your date of birth. Applicants must be 18 or older.</p>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Membership terms and agreement</legend>
+      <ol class="terms">
+        <li>I agree that the names, address and contact details given are correct.</li>
+        <li>I have read TASLY Rules and Regulations and agree to operate my business in accordance with these rules.</li>
+        <li>Having attained the minimum maturity age of 18 years and above, I am acting on my own behalf as an individual.</li>
+        <li>I shall comply with TASLY Rights and Obligations.</li>
+        <li>I am wholly an independent distributor and not an agent, employee, or legal representative of the company.</li>
+        <li>The company may terminate this agreement forthwith, if I break any terms of agreement.</li>
+      </ol>
+      <fieldset class="group agree" data-required>
+        <label class="choice"><input type="checkbox" name="agree" value="yes"> I have read and agree to the membership terms above.</label>
+        <p class="error">You must agree to the terms to continue.</p>
+      </fieldset>
+      <div class="grid">
+        <div>
+          <label class="field req" for="appSig">Applicant's signature (type your full name)</label>
+          <input type="text" id="appSig" name="appSig" class="sigin" maxlength="30" required autocomplete="off">
+          <p class="error">Type your full name to sign.</p>
+        </div>
+        <div>
+          <label class="field req" for="appDate">Date</label>
+          <input type="date" id="appDate" name="appDate" required>
+          <p class="error">Enter the date.</p>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Sponsor's information</legend>
+      <div class="grid">
+        <div class="full">
+          <label class="field req" for="sDistNo">Sponsor distributor No.</label>
+          <input type="text" id="sDistNo" name="sDistNo" maxlength="13" required autocomplete="off">
+          <p class="error">Enter the sponsor's distributor number.</p>
+        </div>
+        <div class="third">
+          <label class="field req" for="sFirst">First name</label>
+          <input type="text" id="sFirst" name="sFirst" maxlength="13" required autocomplete="off">
+          <p class="error">Enter the sponsor's first name.</p>
+        </div>
+        <div class="third">
+          <label class="field" for="sMiddle">Middle name</label>
+          <input type="text" id="sMiddle" name="sMiddle" maxlength="13" autocomplete="off">
+        </div>
+        <div class="third">
+          <label class="field req" for="sLast">Last name</label>
+          <input type="text" id="sLast" name="sLast" maxlength="13" required autocomplete="off">
+          <p class="error">Enter the sponsor's last name.</p>
+        </div>
+        <div>
+          <label class="field req" for="sPhone1">Sponsor phone number 1</label>
+          <input type="tel" id="sPhone1" name="sPhone1" required inputmode="numeric" maxlength="11" placeholder="07123456789" autocomplete="off">
+          <p class="error">Enter 11 digits starting with 0, e.g. 07123456789.</p>
+        </div>
+        <div>
+          <label class="field" for="sPhone2">Sponsor phone number 2 (optional)</label>
+          <input type="tel" id="sPhone2" name="sPhone2" inputmode="numeric" maxlength="11" placeholder="08123456789" autocomplete="off">
+          <p class="error">Enter 11 digits starting with 0, or leave empty.</p>
+        </div>
+      </div>
+      <p class="certify">As a sponsor, I certify that I have presented the Tasly Manual to the applicant without omission or distortion.</p>
+      <div class="grid">
+        <div>
+          <label class="field req" for="sSig">Sponsor's signature (type full name)</label>
+          <input type="text" id="sSig" name="sSig" class="sigin" maxlength="30" required autocomplete="off">
+          <p class="error">Type the sponsor's full name to sign.</p>
+        </div>
+        <div>
+          <label class="field req" for="sDate">Date</label>
+          <input type="date" id="sDate" name="sDate" required>
+          <p class="error">Enter the date.</p>
+        </div>
+        <div>
+          <label class="field" for="storeNo">Tasly Speciality Store No.</label>
+          <input type="text" id="storeNo" name="storeNo" maxlength="10" autocomplete="off">
+        </div>
+        <div>
+          <label class="field" for="storeSig">Signature of Speciality Store</label>
+          <input type="text" id="storeSig" name="storeSig" class="sigin" maxlength="30" autocomplete="off">
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" class="primary">Fill out the form</button>
+      <button type="reset" class="secondary">Clear form</button>
+    </div>
+  </form>
+</div>
+
+<div id="resultView" aria-live="polite">
+  <div class="toolbar">
+    <button type="button" class="primary" id="printBtn">Print / Save as PDF</button>
+    <button type="button" class="secondary" id="editBtn">Edit details</button>
+  </div>
+  <div class="stage"><div id="paper"></div></div>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById('form');
+  const formView = document.getElementById('formView');
+  const resultView = document.getElementById('resultView');
+  const paper = document.getElementById('paper');
+  const today = new Date().toISOString().slice(0, 10);
+
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - 18);
+  document.getElementById('dob').max = cutoff.toISOString().slice(0, 10);
+  document.getElementById('appDate').value = today;
+  document.getElementById('sDate').value = today;
+
+  /* ---------- validation ---------- */
+  const phoneRe = /^0\d{10}$/;
+  const phoneIds = ['phone1', 'phone2', 'sPhone1', 'sPhone2'];
+
+  function checkField(el) {
+    const v = el.value.trim();
+    let ok;
+    if (phoneIds.includes(el.id)) {
+      ok = v === '' ? !el.required : phoneRe.test(v);
+    } else {
+      ok = v !== '' ? el.checkValidity() : !el.required;
+    }
+    el.setAttribute('aria-invalid', ok ? 'false' : 'true');
+    return ok;
+  }
+  function checkGroup(g) {
+    const ok = [...g.querySelectorAll('input')].some(i => i.checked);
+    g.classList.toggle('invalid', !ok);
+    return ok;
+  }
+
+  form.addEventListener('input', e => {
+    const el = e.target;
+    if (phoneIds.includes(el.id)) el.value = el.value.replace(/\D/g, '').slice(0, 11);
+    if (el.required || phoneIds.includes(el.id)) checkField(el);
+    const g = el.closest('[data-required]');
+    if (g) checkGroup(g);
+  });
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    let first = null;
+    form.querySelectorAll('input[type=text],input[type=tel],input[type=date]').forEach(el => {
+      if ((el.required || el.value.trim() !== '') && !checkField(el) && !first) first = el;
+    });
+    form.querySelectorAll('[data-required]').forEach(g => {
+      if (!checkGroup(g) && !first) first = g.querySelector('input');
+    });
+    if (first) { first.focus(); return; }
+    render(Object.fromEntries(new FormData(form).entries()));
+    formView.style.display = 'none';
+    resultView.style.display = 'block';
+    fit();
+    window.scrollTo(0, 0);
+  });
+
+  form.addEventListener('reset', () => {
+    form.querySelectorAll('[aria-invalid]').forEach(el => el.removeAttribute('aria-invalid'));
+    form.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+    setTimeout(() => {
+      document.getElementById('appDate').value = today;
+      document.getElementById('sDate').value = today;
+      document.getElementById('nationality').value = 'Nigerian';
+    });
+  });
+
+  document.getElementById('editBtn').addEventListener('click', () => {
+    resultView.style.display = 'none';
+    formView.style.display = '';
+    window.scrollTo(0, 0);
+  });
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+  /* ---------- paper rendering ---------- */
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const up = s => (s || '').toUpperCase();
+
+  function boxes(text, n) {
+    const t = [...up(text)];
+    let h = '<span class="boxes">';
+    for (let i = 0; i < n; i++) h += '<span class="c1">' + esc(t[i] || '') + '</span>';
+    return h + '</span>';
+  }
+  const cb = on => '<span class="cb">' + (on ? '&#10003;' : '') + '</span>';
+  const ck = (label, on) => '<span class="ck"><span class="l">' + label + '</span>' + cb(on) + '</span>';
+  const unit = (text, n, cap, extra) =>
+    '<div class="unit">' + boxes(text, n) + '<span class="cap">' + cap + '</span></div>';
+  function ddmmyyyy(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return d + '/' + m + '/' + y;
+  }
+  function dobBoxes(iso) {
+    const [y = '', m = '', d = ''] = (iso || '').split('-');
+    return boxes(d, 2) + '<span class="slash">/</span>' + boxes(m, 2) + '<span class="slash">/</span>' + boxes(y, 4);
+  }
+  const phones = (a, b) => boxes(a, 11) + '<span style="width:10px"></span>' + boxes(b, 11);
+
+  function render(d) {
+    paper.innerHTML = `
+      <div class="p-top"></div>
+      <div class="p-head">
+        <div class="p-logo">
+          <span class="t">&#9650;TASLY</span>
+          <span class="c">TASLY WORLD (NIGERIA) CO. LTD
+            <small>Add: No. 16, Water Works, Road Oniru Estate, V/I Lagos.<br>Tel: +234 0806 0023377</small></span>
+        </div>
+        <span class="p-pill">APPLICANT INFORMATION</span>
+      </div>
+      <div class="p-body">
+        <div class="row"><span class="l" style="font-size:12px">DISTRIBUTOR No:</span>${boxes(d.distributorNo, 13)}</div>
+        <div class="row" style="gap:12px">
+          ${unit(d.firstName, 13, 'FIRST NAME')}${unit(d.middleName, 13, 'MIDDLE NAME')}${unit(d.lastName, 13, 'LAST NAME')}
+        </div>
+        <div class="row">
+          ${ck('MALE', d.gender === 'Male')}${ck('FEMALE', d.gender === 'Female')}
+          ${ck('SINGLE', d.marital === 'Single')}${ck('MARRIED', d.marital === 'Married')}
+          <span class="l">NATIONALITY</span>${boxes(d.nationality, 12)}
+        </div>
+        <div class="row">
+          <span class="l">EDUCATIONAL QUALIFICATION:</span>
+          ${ck('SSCE/GCE', d.education === 'SSCE/GCE')}${ck('OND/NCE', d.education === 'OND/NCE')}
+          ${ck('HSC/BSC', d.education === 'HSC/BSC')}${ck('POST-GRADUATE', d.education === 'Post-graduate')}
+        </div>
+        <div class="row">
+          <span class="l">RELIGION</span>${boxes(d.religion, 14)}
+          <span class="l">OCCUPATION</span>${boxes(d.occupation, 14)}
+        </div>
+        <div class="row">
+          ${ck('LOWER INCOME: 0-40,000', d.income === 'lower')}
+          ${ck('MIDDLE INCOME: 50,000-90,000', d.income === 'middle')}
+          ${ck('UPPER INCOME: 100,000-Above', d.income === 'upper')}
+        </div>
+        <div class="row"><span class="l" style="width:112px">RESIDENTIAL ADDRESS</span>${boxes(d.address1, 36)}</div>
+        <div class="row">${boxes(d.address2, 43)}</div>
+        <div class="row">
+          <span class="l">PHONE(S)</span>${phones(d.phone1, d.phone2)}
+          <span class="l">DATE OF BIRTH</span>${dobBoxes(d.dob)}
+        </div>
+
+        <div class="p-terms">
+          <h3>Membership Terms And Agreement</h3>
+          <ol>
+            <li>I agree that the names, address and contact details given are correct.</li>
+            <li>I have read TASLY Rules and Regulations and agree to operate my business in accordance with these rules.</li>
+            <li>Having attained the minimum maturity age of 18 years and above, I am acting on my own behalf as an individual.</li>
+            <li>I shall comply with TASLY Rights and Obligations.</li>
+            <li>I am wholly an independent distributor and not an agent, employee, or legal representative of the company.</li>
+            <li>The company may terminate this agreement forthwith, if I break any terms of agreement.</li>
+          </ol>
+        </div>
+        <div class="row" style="justify-content:space-between;margin:14px 0 4px">
+          <span><span class="l" style="font-size:12px">Applicant's Signature</span> <span class="line" style="min-width:230px">${esc(d.appSig)}</span></span>
+          <span><span class="l" style="font-size:12px">Date</span> <span class="line dt">${ddmmyyyy(d.appDate)}</span></span>
+        </div>
+
+        <div class="p-sec"><span>Sponsor's Information</span></div>
+        <div class="row" style="justify-content:center"><span class="l" style="font-size:12px">DISTRIBUTOR No:</span>${boxes(d.sDistNo, 13)}</div>
+        <div class="row" style="gap:12px">
+          ${unit(d.sFirst, 13, 'FIRST NAME')}${unit(d.sMiddle, 13, 'MIDDLE NAME')}${unit(d.sLast, 13, 'LAST NAME')}
+        </div>
+        <div class="row" style="justify-content:center"><span class="l">PHONE(S)</span>${phones(d.sPhone1, d.sPhone2)}</div>
+        <p class="p-cert" style="text-align:center">As a sponsor, I certify that I have presented Tasly Manual to the applicant without omission or distortion</p>
+        <div class="row" style="justify-content:space-between">
+          <span><span class="l" style="font-size:12px">Sponsor's Signature</span> <span class="line" style="min-width:220px">${esc(d.sSig)}</span></span>
+          <span><span class="l" style="font-size:12px">Date</span> <span class="line dt">${ddmmyyyy(d.sDate)}</span></span>
+        </div>
+        <div class="row"><span class="l" style="font-size:12px">Tasly Speciality Store No.</span>${boxes(d.storeNo, 10)}</div>
+        <div class="row"><span class="l" style="font-size:12px">Signature of Speciality Store</span> <span class="line" style="min-width:230px">${esc(d.storeSig)}</span></div>
+      </div>
+      <div class="p-foot">
+        <span>WHITE COPY: Tasly Office</span>
+        <span>YELLOW COPY: Speciality Store/Sponsor</span>
+        <span>PINK COPY: Applicant</span>
+      </div>`;
+  }
+
+  /* Scale the 700px paper to fit narrow phone screens */
+  function fit() {
+    const scale = Math.min(1.25, (window.innerWidth - 16) / 700);
+    paper.style.zoom = scale;
+  }
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>
